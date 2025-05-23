@@ -14,9 +14,13 @@ const ForgotPass = ({navigation}) => {
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
     const handleResetPassword = async () => {
+        const hashedPhoneNumber = SHA256(phoneNumber).toString();
         const hashedNewPassword = SHA256(newPassword).toString();
 
-        if (newPassword !== confirmNewPassword) {
+        if (newPassword.length < 8) {
+            alert("Password must be at least 8 characters long.");
+            return;
+        }else if(newPassword !== confirmNewPassword) {
             alert("Passwords do not match.");
             return;
         }
@@ -26,13 +30,13 @@ const ForgotPass = ({navigation}) => {
             if (storedUserData) {
                 const parsedUserData = JSON.parse(storedUserData);
 
-                if (parsedUserData.phoneNumber.replace(/\D/g, '') === phoneNumber.replace(/\D/g, '')) {
+                if (parsedUserData.phoneNumberHash === hashedPhoneNumber) {
                     parsedUserData.password = hashedNewPassword;
                     await AsyncStorage.setItem('userData', JSON.stringify(parsedUserData));
                     alert('Password reset successful!');
-                    navigation.navigate('Signin'); // Navigate back to Signin page
+                    navigation.navigate('Signin');
                 } else {
-                    alert('Invalid phone number or email.');
+                    alert('Invalid phone number.');
                 }
             } else {
                 alert('No user data found. Please sign up first.');

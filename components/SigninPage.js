@@ -20,8 +20,9 @@ const Signin = ({navigation}) =>{
   };
 
   const handleSignin = async () => {
+    const hashedPhoneNumber = SHA256(phoneNumber).toString();
     const hashedInputPassword = SHA256(password).toString();
-
+    
     phoneNumberField.validate(phoneNumber);
     passwordField.validate(password);
   
@@ -32,20 +33,23 @@ const Signin = ({navigation}) =>{
   
     try {
       const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        const parsedUserData = JSON.parse(storedUserData);
-  
-        if (
-          parsedUserData.phoneNumber === phoneNumber &&
-          parsedUserData.password === hashedInputPassword
-        ) {
-          alert('Login successful!');
-          navigation.navigate('LandingPage'); // Replace with your actual landing screen name
-        } else {
-          alert('Invalid phone number or password.');
-        }
+      if (!storedUserData) {
+        Alert.alert('Error', 'No user data found. Please sign up first.');
+        return;
+      }
+
+      const parsedUserData = JSON.parse(storedUserData);
+      const storedPhoneHash = parsedUserData.phoneNumberHash;
+      const storedPasswordHash = parsedUserData.password;
+      // Check if the user data exists
+      if (storedPhoneHash === hashedPhoneNumber && storedPasswordHash === hashedInputPassword) {
+        alert('Login successful!');
+        navigation.navigate('LandingPage', {
+          phoneNumber: hashedPhoneNumber,
+          password: hashedInputPassword
+        });
       } else {
-        alert('No user data found. Please sign up first.');
+        alert('Invalid phone number or password.');
       }
     } catch (error) {
       console.error('Failed to retrieve user data:', error);

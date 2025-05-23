@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SHA256 from 'crypto-js/sha256';
 import Icon from 'react-native-vector-icons/Feather';
-import {View, Text, TouchableOpacity, StyleSheet, TextInput, ImageBackground} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, TextInput, ImageBackground, Alert} from 'react-native';
 import TypingText from './TypingText';
 import useRequiredField from './RequiredTextInput';
 
@@ -10,27 +10,20 @@ import useRequiredField from './RequiredTextInput';
 const Signup = ({navigation}) =>{
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [password, setPassword] = useState('');
-
     const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
     const [confirmPassword, setConfirmPassword] = useState('');
-
     const [phoneNumber, setPhoneNumber] = useState('');
     const [email, setEmail] = useState('');
     const [fullName, setFullName] = useState('');
 
-    const nameField = useRequiredField(text =>
-      /^[A-Za-z\s'-]+$/.test(text.trim())
-    );    
+    //Validators
+    const nameField = useRequiredField(text => /^[A-Za-z\s'-]+$/.test(text.trim()));    
     const phoneNumberField = useRequiredField(text => /^\d+$/.test(text));
-    const emailField = useRequiredField(text =>
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim())
-    );    
+    const emailField = useRequiredField(text => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim()));    
     const passwordField = useRequiredField(text => text.trim() !== '');
     const confirmPasswordField = useRequiredField(text => text.trim() !== '');
 
     const handleSignup = async () => {
-      const hashedPassword = SHA256(password).toString();
-
       nameField.validate(fullName);
       phoneNumberField.validate(phoneNumber);
       emailField.validate(email);
@@ -46,6 +39,9 @@ const Signup = ({navigation}) =>{
       ){
         alert("Please fill all fields correctly.");
         return;
+      }else if(password.length < 8) {
+        alert("Password must be at least 8 characters long."); 
+        return;
       }else if (password !== confirmPassword) {
         alert("Passwords do not match."); 
         return;
@@ -54,14 +50,30 @@ const Signup = ({navigation}) =>{
         return;
       }
   
-      const userData = {
-        fullName,
-        email,
-        phoneNumber,
-        password: hashedPassword,
-      };
-  
       try {
+        const storedData = await AsyncStorage.getItem('userData');
+        if (storedData) {
+          const existing = JSON.parse(storedData);
+          const hashedPhone = SHA256(phoneNumber).toString();
+          // check duplicates
+          if (existing.email === email || existing.phoneNumberHash === hashedPhone) {
+            Alert.alert('Error', 'Email or phone number already exists.');
+            return;
+          }
+        }
+
+        // hash sensitive data
+        const hashedPassword = SHA256(password).toString();
+        const hashedPhoneNumber = SHA256(phoneNumber).toString();
+        const hashedFullName = SHA256(fullName).toString();
+
+        const userData = {
+          fullNameHash: hashedFullName,
+          email,
+          phoneNumberHash: hashedPhoneNumber,
+          password: hashedPassword,
+        };
+
         await AsyncStorage.setItem('userData', JSON.stringify(userData));
         alert('Signup data saved locally!');
         // Optional: clear form or navigate
